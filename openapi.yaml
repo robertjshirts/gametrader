@@ -1,0 +1,533 @@
+openapi: 3.0.2
+info:
+  title: gobuster
+  version: 1.0.0
+paths:
+  /users:
+    post:
+      summary: Create a user
+      operationId: createUser
+      requestBody:
+        $ref: '#/components/requestBodies/PostUser'
+      tags:
+        - users
+      responses:
+        '201':
+          description: Successfully created user
+          content:
+            application/json: 
+              schema: 
+                $ref: '#/components/schemas/UserResponse'
+  /users/{userId}:
+    get:
+      summary: Retrieve user data
+      operationId: getUser
+      tags:
+        - users
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '200':
+          description: Successfully retrieved user data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+    patch:
+      summary: Update some of the user data
+      description: Update name and/or address. Email is immutable and will be ignored if included with request body.
+      operationId: updateUser
+      tags:
+        - users
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      requestBody:
+        $ref: '#/components/requestBodies/PatchUser'
+      responses:
+        '204':
+          description: Successfully updated user data
+    delete:
+      summary: Delete user data
+      description: Also deletes games that are owned by the user. Will return with '204' even if there is no matching userId.
+      operationId: deleteUser
+      tags:
+        - users
+      parameters:
+        - $ref: '#/components/parameters/userId'
+      responses:
+        '204':
+          description: Successfully deleted user data.
+  /games:
+    post:
+      summary: Create a game
+      description: The game is automatically assign it to the user with matching userId.
+      operationId: createGame
+      tags:
+        - games
+      requestBody:
+        $ref: '#/components/requestBodies/PostGame'
+      responses:
+        '201':
+          description: Successfully created game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameResponse'
+    get:
+      summary: Get multiple games
+      operationId: getGames
+      tags:
+        - games
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/sortByOwner'
+      responses:
+        '200':
+          description: Successfully found games
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSearchResponse'
+  /games/{gameId}:
+    get:
+      summary: Retrieve game data
+      operationId: getGame
+      tags:
+        - games
+      parameters:
+        - $ref: '#/components/parameters/gameId'
+      responses:
+        '200':
+          description: Successfully retrieved game data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameResponse'
+    patch:
+      summary: Update some of the game data
+      description: Update name, publisher, year, system, condition, and/or owners. userId is immutable and will be ignored if included with request body.
+      operationId: updateGame
+      tags:
+        - games
+      parameters:
+        - $ref: '#/components/parameters/gameId'
+      requestBody:
+        $ref: '#/components/requestBodies/PatchGame'
+      responses:
+        '204':
+          description: Successfully updated game data
+    delete:
+      summary: Delete game data
+      description: Also deletes all offers that mention it. Will return wtih '204' even if there is no matching gameId
+      operationId: deleteGame
+      tags:
+        - games
+      parameters:
+        - $ref: '#/components/parameters/gameId'
+      responses:
+        '204':
+          description: Successfully deleted user data.
+  /offers:
+    post:
+      summary: Create an offer
+      description: Create an offer to trade a game with another user. Will respond with 409 if the games don't belong to the appropriate users.
+      operationId: createOffer
+      tags:
+        - offers
+      requestBody:
+        $ref: '#/components/requestBodies/PostOffer'
+      responses:
+        '201':
+          description: Successfully created offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferResponse'
+    get:
+      summary: Get multiple offers
+      operationId: getOffers
+      tags:
+        - offers
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/sortByOfferer'
+        - $ref: '#/components/parameters/sortByRecipient'
+      responses:
+        '200':
+          description: Successfully found games
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferSearchResponse'
+  /offers/{offerId}:
+    get:
+      summary: Retreive offer data
+      operationId: getOffer
+      tags:
+        - offers
+      parameters:
+        - $ref: '#/components/parameters/offerId'
+      responses:
+        '200':
+          description: Successfully retrieved offer data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferResponse'
+    patch:
+      summary: Update the status of the offer
+      description: Can update the status of the offer from pending to cancelled, rejected, or accepted
+      operationId: updateOffer
+      tags:
+        - offers
+      parameters:
+        - $ref: '#/components/parameters/offerId'
+      requestBody:
+        $ref: '#/components/requestBodies/PatchOffer'
+      responses:
+        '204':
+          description: Successfully updated status and games (if accepted).
+        '409':
+          description: There was an issue with the offer (ie user no longer owns game)
+          content:
+            application/json:
+              schema:
+                type: string
+                example: The user with userId 43 does not own the game with gameId 20. Offer status set to cancelled.
+    delete:
+      summary: Delete offer data
+      description: Will return with '204' even if there is no matching gameId
+      operationId: deleteOffer
+      tags:
+        - offers
+      parameters:
+        - $ref: '#/components/parameters/offerId'
+      responses:
+        '204':
+            description: Successfully deleted offer data
+components:
+  requestBodies: 
+    PostUser:
+      content:
+        application/json: 
+          schema: 
+            type: object
+            properties:
+              email:
+                pattern: '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,5}$'
+                type: string
+                example: johndoe@gmail.com
+              name: 
+                type: string
+                example: John Doe
+              address:
+                type: string
+                format: ADDRESS LINE 1 ADDRESS LINE 2, CITY, STATE ZIPCODE
+                example: 123 Main St Apt 1, Salt Lake City, UT 84111
+            required:
+              - email
+              - name
+              - address
+    PatchUser:
+      content:
+        application/json: 
+          schema: 
+            type: object
+            properties:
+              name: 
+                type: string
+                example: John Doe
+              address:
+                type: string
+                format: ADDRESS LINE 1 ADDRESS LINE 2, CITY, STATE ZIPCODE
+                example: 123 Main St Apt 1, Salt Lake City, UT 84111
+    PostGame:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              userId:
+                type: integer
+                description: userId of the owner of the game
+                example: 43
+              name:
+                type: string
+                description: name of the game
+                example: Super Mario Bros
+              publisher:
+                type: string
+                description: publisher of the game
+                example: Nintendo
+              year:
+                type: integer
+                description: year of the game was published/released
+                example: 1985
+              system:
+                type: string
+                description: the system that the game was released on
+                example: NES
+              condition:
+                $ref: '#/components/schemas/GameConditionEnum'
+              owners:
+                type: integer
+                description: the number of owners who owned the game before
+                example: 1
+            required:
+              - userId
+              - name
+              - publisher
+              - year
+              - system
+              - condition
+    PatchGame:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: name of the game
+                example: Super Mario Bros
+              publisher:
+                type: string
+                description: publisher of the game
+                example: Nintendo
+              year:
+                type: integer
+                description: year of the game was published/released
+                example: 1985
+              system:
+                type: string
+                description: the system that the game was released on
+                example: NES
+              condition:
+                $ref: '#/components/schemas/GameConditionEnum'
+              owners:
+                type: integer
+                description: the number of owners who owned the game before
+                example: 1
+    PostOffer:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              offererUserId:
+                type: integer
+                description: the integer representing the trade creator's userId
+                example: 43
+              recipientUserId: 
+                type: integer
+                description: the integer representing the trade receiver's userId
+                example: 44
+              offererGameId:
+                type: integer
+                description: the integer representing the game being traded by the offerer
+                example: 20
+              recipientGameId:
+                type: integer
+                description: the integer representing the game being requested of the reipient
+                example: 21
+            required:
+              - offererUserId
+              - recipientUserId
+              - offererGameId
+              - recipientGameId
+    PatchOffer:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OfferStatusEnum'
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 43
+        email:
+          type: string
+          example: johndoe@gmail.com
+        name:
+          type: string
+          example: John Doe
+        address:
+          type: string
+          example: 123 Main St Apt 1, Salt Lake City, UT 84111
+      required:
+        - userId
+        - email
+        - name
+        - address
+    GameResponse:
+      type: object
+      properties:
+        gameId:
+          type: integer
+          example: 20
+        userId:
+          type: string
+          description: hateoas link to the user who owns the game
+          example: users/43
+        name:
+          type: string
+          example: Super Mario Bros
+        publisher:
+          type: string
+          description: publisher of the game
+          example: Nintendo
+        year:
+          type: integer
+          example: 1985
+        system:
+          type: string
+          example: NES
+        condition:
+          type: string
+          example: mint
+          enum:
+            - mint
+            - good
+            - fair
+            - poor
+        owners:
+          type: integer
+          example: 1
+      required:
+        - gameId
+        - userId
+        - name
+        - publisher
+        - year
+        - system
+        - condition
+    GameSearchResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GameResponse'
+    OfferResponse:
+      type: object
+      properties:
+        offerId:
+          type: integer
+          example: 60
+        offererUserId:
+          type: string
+          description: hateoas link to the user who initiated the trade
+          example: users/43
+        recipientUserId:
+          type: string
+          description: hateoas link to the user who is being offered the trade
+          example: users/44
+        offererGameId:
+          type: string
+          description: hateoas link to the game being offered by the trade intiator
+          example: games/20
+        recipientGameId:
+          type: string
+          description: hateoas link to the game being requested by the trade recipient
+          example: games/21
+        status:
+          type: string
+          example: pending
+          enum:
+            - pending
+            - cancelled
+            - rejected
+            - accpeted
+      required:
+        - offerId
+        - offererUserId
+        - recipientUserId
+        - offererGameId
+        - recipientGameId
+        - status
+    OfferSearchResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/OfferResponse'
+    OfferStatusEnum:
+      type: string
+      example: pending
+      enum:
+        - pending
+        - cancelled
+        - rejected
+        - accepted
+    GameConditionEnum:
+      type: string
+      example: mint
+      enum:
+        - mint
+        - good
+        - fair
+        - poor
+  parameters:
+    userId:
+      name: userId
+      description: path parameter used to differentiate specific users.
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 43
+    gameId:
+      name: gameId
+      description: path parameter used to differentaite specific games.
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 20
+    offerId:
+      name: offerId
+      description: path parameter used to differentiate specific offers.
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 60
+    limit:
+      name: limit
+      description: the number of resources you want returned. should be a non negative integer
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 15
+    offset:
+      name: offset
+      description: the number of resources you want to skip before returning results. should be a non negative integer.
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 30
+    sortByOwner:
+      name: userId
+      description: query parameter to filter results by userId.
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 43
+    sortByOfferer:
+      name: offererUserId
+      description: query parameter to filter results by offererId
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 60
+    sortByRecipient:
+      name: recipientUserId
+      description: query parameter to filter results by offererId
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 60
